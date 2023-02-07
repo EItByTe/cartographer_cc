@@ -1,0 +1,28 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "",
+        "limitSymbolsToIncludedHeaders": true
+      },
+      "includePath": [
+        "/home/cc/carto_ws/cartographer_detailed_comments_ws/install_isolated/include/**",
+        "/home/cc/locus_ws/devel/include/**",
+        "/opt/ros/melodic/include/**",
+        "/home/cc/locus_ws/src/common_nebula_slam/frontend_utils/include/**",
+        "/home/cc/locus_ws/src/common_nebula_slam/geometry_utils/include/**",
+        "/home/cc/locus_ws/src/LOCUS/locus/include/**",
+        "/home/cc/locus_ws/src/LOCUS/multithreaded_gicp/include/**",
+        "/home/cc/locus_ws/src/common_nebula_slam/parameter_utils/include/**",
+        "/home/cc/locus_ws/src/LOCUS/point_cloud_filter/include/**",
+        "/home/cc/locus_ws/src/LOCUS/point_cloud_localization/include/**",
+        "/home/cc/locus_ws/src/common_nebula_slam/point_cloud_mapper/include/**",
+        "/home/cc/locus_ws/src/LOCUS/point_cloud_merger/include/**",
+        "/home/cc/locus_ws/src/LOCUS/point_cloud_odometry/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS"
+    }
+  ],
+  "version": 4
+}
