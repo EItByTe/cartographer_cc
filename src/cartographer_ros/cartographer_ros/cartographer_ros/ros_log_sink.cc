@@ -45,7 +45,8 @@ const char* GetBasename(const char* filepath) {
 
 
 /**
- * @brief 在构造函数中调用AddLogSink(), 将ScopedRosLogSink类注册到glog中
+ * @brief 在构造函数中调用AddLogSink(),该函数是google::LogSink中的, 将ScopedRosLogSink类注册到glog中
+ * 在析构函数中解注册
  */
 ScopedRosLogSink::ScopedRosLogSink() : will_die_(false) { AddLogSink(this); }
 ScopedRosLogSink::~ScopedRosLogSink() { RemoveLogSink(this); }
@@ -70,6 +71,7 @@ void ScopedRosLogSink::send(const ::google::LogSeverity severity,
                             const size_t message_len) {
   const std::string message_string = ::google::LogSink::ToString(
       severity, GetBasename(filename), line, tm_time, message, message_len);
+      // 在此根据消息级别选择ROS内置发布消息的函数
   switch (severity) {
     case ::google::GLOG_INFO:
       ROS_INFO_STREAM(message_string);
@@ -94,6 +96,7 @@ void ScopedRosLogSink::send(const ::google::LogSeverity severity,
 void ScopedRosLogSink::WaitTillSent() {
   if (will_die_) {
     // Give ROS some time to actually publish our message.
+    // 因为发完这个FATAL的消息，程序就要终止了，所以给予一些时间发布完整
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   }
 }

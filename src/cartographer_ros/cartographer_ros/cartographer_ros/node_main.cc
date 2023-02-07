@@ -76,7 +76,7 @@ void Run() {
       cartographer::mapping::CreateMapBuilder(node_options.map_builder_options);
   
   // c++11: std::move 是将对象的状态或者所有权从一个对象转移到另一个对象, 
-  // 只是转移, 没有内存的搬迁或者内存拷贝所以可以提高利用效率,改善性能..
+  // 只是转移, 没有内存的搬迁或者内存拷贝所以可以提高利用效率,改善性能.
   // 右值引用是用来支持转移语义的.转移语义可以将资源 ( 堆, 系统对象等 ) 从一个对象转移到另一个对象, 
   // 这样能够减少不必要的临时对象的创建、拷贝以及销毁, 能够大幅度提高 C++ 应用程序的性能.
   // 临时对象的维护 ( 创建和销毁 ) 对性能有严重影响.
@@ -95,6 +95,7 @@ void Run() {
     node.StartTrajectoryWithDefaultTopics(trajectory_options);
   }
 
+  // 对所有的回调函数进行执行，但是是单线程，有一定频率
   ::ros::spin();
 
   // 结束所有处于活动状态的轨迹
@@ -105,8 +106,8 @@ void Run() {
 
   // 如果save_state_filename非空, 就保存pbstream文件
   if (!FLAGS_save_state_filename.empty()) {
-    node.SerializeState(FLAGS_save_state_filename,
-                        true /* include_unfinished_submaps */);
+    node.SerializeState(FLAGS_save_state_filename, 
+                                                true /* include_unfinished_submaps */);
   }
 }
 
@@ -140,9 +141,11 @@ int main(int argc, char** argv) {
   ::ros::start();
 
   // 使用ROS_INFO进行glog消息的输出
+  // cartographer 自定义的输出打印消息类
   cartographer_ros::ScopedRosLogSink ros_log_sink;
 
   // 开始运行cartographer_ros
+  // 此处为该程序的入口函数
   cartographer_ros::Run();
 
   // 结束ROS相关的线程, 网络等
