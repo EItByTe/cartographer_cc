@@ -59,6 +59,7 @@ void Run() {
   constexpr double kTfBufferCacheTimeInSeconds = 10.;
   tf2_ros::Buffer tf_buffer{::ros::Duration(kTfBufferCacheTimeInSeconds)};
   // 开启监听tf的独立线程
+  // TransformListener 还会给予 tf_buffer一个标志，去读tf
   tf2_ros::TransformListener tf(tf_buffer);
 
   NodeOptions node_options;
@@ -72,6 +73,7 @@ void Run() {
 
   // MapBuilder类是完整的SLAM算法类
   // 包含前端(TrajectoryBuilders,scan to submap) 与 后端(用于查找回环的PoseGraph) 
+  // 使用auto定义变量是必须要有初始化，否则会报错，auto就是刚刚返回的智能指针类型
   auto map_builder =
       cartographer::mapping::CreateMapBuilder(node_options.map_builder_options);
   
@@ -82,6 +84,7 @@ void Run() {
   // 临时对象的维护 ( 创建和销毁 ) 对性能有严重影响.
 
   // Node类的初始化, 将ROS的topic传入SLAM, 也就是MapBuilder
+  // FLAGS_collect_metrics是最上面初始化为false的参数
   Node node(node_options, std::move(map_builder), &tf_buffer,
             FLAGS_collect_metrics);
 
@@ -95,9 +98,10 @@ void Run() {
     node.StartTrajectoryWithDefaultTopics(trajectory_options);
   }
 
-  // 对所有的回调函数进行执行，但是是单线程，有一定频率
+  // 对所有的回调函数进行执行，但是是单线程（程序运行有顺序），有一定频率
   ::ros::spin();
 
+  // 即按了CTRL+C时，才会进入下面的程序。
   // 结束所有处于活动状态的轨迹
   node.FinishAllTrajectories();
 
@@ -133,7 +137,7 @@ int main(int argc, char** argv) {
   CHECK(!FLAGS_configuration_basename.empty())
       << "-configuration_basename is missing.";
 
-  // ros节点的初始化
+  // ros节点的初始化，命名为cartographer_node
   ::ros::init(argc, argv, "cartographer_node");
 
   // 一般不需要在自己的代码中显式调用

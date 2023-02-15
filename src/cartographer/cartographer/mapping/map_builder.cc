@@ -510,8 +510,10 @@ std::map<int, int> MapBuilder::LoadStateFromFile(
 }
 
 // 工厂函数
+// std::unique_ptr 智能指针
 std::unique_ptr<MapBuilderInterface> CreateMapBuilder(
     const proto::MapBuilderOptions& options) {
+      // 通过make_unique初始化，不用absl库，用c++的std库也是这样初始化
   return absl::make_unique<MapBuilder>(options);
 }
 
