@@ -17,6 +17,7 @@
 #ifndef CARTOGRAPHER_ROS_CARTOGRAPHER_ROS_NODE_H
 #define CARTOGRAPHER_ROS_CARTOGRAPHER_ROS_NODE_H
 
+// c++11的一些数据类型
 #include <map>
 #include <memory>
 #include <set>
@@ -64,6 +65,7 @@ class Node {
 
   // c++11: =delete: 禁止编译器自动生成默认函数; =default: 要求编译器生成一个默认函数
 
+  //如果不用delete，编译器会自动给以下两个运算生成默认函数
   // 禁止编译器自动生成 默认拷贝构造函数(复制构造函数)
   Node(const Node&) = delete;
   // 禁止编译器自动生成 默认赋值函数

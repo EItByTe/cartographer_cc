@@ -29,6 +29,7 @@ namespace cartographer_ros {
 
 // Top-level options of Cartographer's ROS integration.
 struct NodeOptions {
+  // 全局变量
   ::cartographer::mapping::proto::MapBuilderOptions map_builder_options;
   std::string map_frame;
   double lookup_transform_timeout_sec;
