@@ -36,14 +36,17 @@ struct NodeOptions {
   double submap_publish_period_sec;
   double pose_publish_period_sec;
   double trajectory_publish_period_sec;
+  // 下列三个参数不在lua文件中给出
+  // 是否发布tf
   bool publish_to_tf = true;
+  // 是否发布追踪的位姿
   bool publish_tracked_pose = false;
+  // 是否使用位姿推测器
   bool use_pose_extrapolator = true;
 };
 
-NodeOptions CreateNodeOptions(
-    ::cartographer::common::LuaParameterDictionary* lua_parameter_dictionary);
 
+// 读取配置文件 函数声明
 std::tuple<NodeOptions, TrajectoryOptions> LoadOptions(
     const std::string& configuration_directory,
     const std::string& configuration_basename);

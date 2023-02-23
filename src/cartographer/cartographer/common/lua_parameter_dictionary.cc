@@ -161,6 +161,7 @@ LuaParameterDictionary::NonReferenceCounted(
  * @param[in] code 配置文件内容
  * @param[in] file_resolver FileResolver类
  */
+// 在初始化列表中调用了另一个构造函数
 LuaParameterDictionary::LuaParameterDictionary(
     const std::string& code, std::unique_ptr<FileResolver> file_resolver)
     : LuaParameterDictionary(code, ReferenceCount::YES,
@@ -174,6 +175,7 @@ LuaParameterDictionary::LuaParameterDictionary(
  * @param[in] reference_count 
  * @param[in] file_resolver FileResolver类
  */
+// 这里调用了很多lua库中的函数，没有深究。
 LuaParameterDictionary::LuaParameterDictionary(
     const std::string& code, ReferenceCount reference_count,
     std::unique_ptr<FileResolver> file_resolver)
@@ -187,7 +189,7 @@ LuaParameterDictionary::LuaParameterDictionary(
   luaL_openlibs(L_);
 
   lua_register(L_, "choose", LuaChoose);
-  // 将LuaInclude注册为Lua的全局函数变量,使得Lua可以调用C函数
+  // 将LuaInclude注册为Lua的全局函数变量,使得Lua在解析参数的时候可以调用注册过的C函数
   lua_register(L_, "include", LuaInclude);
   lua_register(L_, "read", LuaRead);
 
@@ -453,6 +455,7 @@ int LuaParameterDictionary::LuaInclude(lua_State* L) {
 
   LuaParameterDictionary* parameter_dictionary = GetDictionaryFromRegistry(L);
   const std::string basename = lua_tostring(L, -1);
+  // 这里basename就是lua文件最上面所include的文件
   const std::string filename =
       parameter_dictionary->file_resolver_->GetFullPathOrDie(basename);
   // 防止双重包含
@@ -473,6 +476,8 @@ int LuaParameterDictionary::LuaInclude(lua_State* L) {
   CHECK_EQ(lua_gettop(L), 0);
 
   // 判断了2次文件是否存在
+  // 这里GetFileContentOrDie还会调用一次GetFullPathOrDie函数
+  // 于是对于一个文件，程序会在文件夹中寻找（暴力搜索）两次，同时也会打印两次log
   const std::string content =
       parameter_dictionary->file_resolver_->GetFileContentOrDie(basename);
   CheckForLuaErrors(

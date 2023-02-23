@@ -34,17 +34,19 @@ namespace common {
 ConfigurationFileResolver::ConfigurationFileResolver(
     const std::vector<std::string>& configuration_files_directories)
     : configuration_files_directories_(configuration_files_directories) {
+      // 这里是install_isolated文件夹中的配置文件夹目录
   configuration_files_directories_.push_back(kConfigurationFilesDirectory);
 }
 
 /**
- * @brief 在所有的配置文件目录中 根据给定配置文件的名字 搜索 配置文件
+ * @brief 在所有的配置文件目录中 根据给定配置文件的名字 搜索 配置文件 暴力搜索
  * 
  * @param[in] basename 给定配置文件的名字
  * @return std::string 如果搜索成功, 返回配置文件的全路径名
  */
 std::string ConfigurationFileResolver::GetFullPathOrDie(
     const std::string& basename) {
+      // configuration_files_directories_是一个string的vector
   for (const auto& path : configuration_files_directories_) {
     const std::string filename = path + "/" + basename;
     std::ifstream stream(filename.c_str());
@@ -72,7 +74,7 @@ std::string ConfigurationFileResolver::GetFileContentOrDie(
   const std::string filename = GetFullPathOrDie(basename);
   std::ifstream stream(filename.c_str());
 
-  // 读取配置文件内容并返回
+  // 读取配置文件内容并返回，这里返回的是一个迭代器
   return std::string((std::istreambuf_iterator<char>(stream)),
                      std::istreambuf_iterator<char>());
 }

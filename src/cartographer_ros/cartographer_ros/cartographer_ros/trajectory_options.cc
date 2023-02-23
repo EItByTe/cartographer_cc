@@ -26,6 +26,8 @@ namespace cartographer_ros {
 
 namespace {
 
+
+// 对参数进行检查
 void CheckTrajectoryOptions(const TrajectoryOptions& options) {
   CHECK_GE(options.num_subdivisions_per_laser_scan, 1);
   CHECK_GE(options.num_laser_scans + options.num_multi_echo_laser_scans +

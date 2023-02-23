@@ -18,6 +18,7 @@
 
 #include <vector>
 
+// 使用重点
 #include "cartographer/common/configuration_file_resolver.h"
 #include "cartographer/mapping/map_builder_interface.h"
 #include "glog/logging.h"
@@ -40,6 +41,8 @@ NodeOptions CreateNodeOptions(
   options.map_builder_options =
       ::cartographer::mapping::CreateMapBuilderOptions(
           lua_parameter_dictionary->GetDictionary("map_builder").get());
+          //这里.get()方法是在智能指针取值的时候所用，故这里lua_parameter_dictionary->GetDictionary("map_builder")返回的
+          //应该是一个智能指针。
 
   options.map_frame = lua_parameter_dictionary->GetString("map_frame");
   options.lookup_transform_timeout_sec =
@@ -50,6 +53,7 @@ NodeOptions CreateNodeOptions(
       lua_parameter_dictionary->GetDouble("pose_publish_period_sec");
   options.trajectory_publish_period_sec =
       lua_parameter_dictionary->GetDouble("trajectory_publish_period_sec");
+      // 这三个值有默认值，只要判断一下即可，用HasKey()判断 
   if (lua_parameter_dictionary->HasKey("publish_to_tf")) {
     options.publish_to_tf =
         lua_parameter_dictionary->GetBool("publish_to_tf");
