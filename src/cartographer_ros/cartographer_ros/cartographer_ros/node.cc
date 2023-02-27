@@ -164,7 +164,7 @@ Node::Node(
   constraint_list_publisher_ =
       node_handle_.advertise<::visualization_msgs::MarkerArray>(
           kConstraintListTopic, kLatestOnlyPublisherQueueSize);
-  // 发布tracked_pose, 默认不发布
+  // 发布tracked_pose, 默认不发布(NodeOptions类给了默认值false)
   if (node_options_.publish_tracked_pose) {
     tracked_pose_publisher_ =
         node_handle_.advertise<::geometry_msgs::PoseStamped>(
