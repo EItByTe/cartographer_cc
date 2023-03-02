@@ -43,7 +43,7 @@ constexpr double kConstraintMarkerScale = 0.025;
   return result;
 }
 
-// 轨迹的Marker的声明与初始化
+// 轨迹的Marker的声明与初始化(rviz显示使用)
 visualization_msgs::Marker CreateTrajectoryMarker(const int trajectory_id,
                                                   const std::string& frame_id) {
   visualization_msgs::Marker marker;
@@ -110,6 +110,7 @@ void PushAndResetLineMarker(visualization_msgs::Marker* marker,
  */
 MapBuilderBridge::MapBuilderBridge(
     const NodeOptions& node_options,
+    // map_builder是真正构建地图的类，在调用时通过std::move的方式传入map_builder
     std::unique_ptr<cartographer::mapping::MapBuilderInterface> map_builder,
     tf2_ros::Buffer* const tf_buffer)
     : node_options_(node_options),
@@ -120,8 +121,10 @@ MapBuilderBridge::MapBuilderBridge(
 void MapBuilderBridge::LoadState(const std::string& state_filename,
                                  bool load_frozen_state) {
   // Check if suffix of the state file is ".pbstream".
-  const std::string suffix = ".pbstream";
+  const std::string suffix = ".pbstream"; //suffix 后缀
   // 检查后缀是否是.pbstream
+  // std::max<int>(state_filename.size() - suffix.size(), 0)得到了.的索引
+  // 然后一直索引到名字最后，即获得.+文件名的后缀
   CHECK_EQ(state_filename.substr(
                std::max<int>(state_filename.size() - suffix.size(), 0)),
            suffix)
@@ -252,7 +255,7 @@ MapBuilderBridge::GetTrajectoryStates() {
   return trajectory_states;
 }
 
-// 获取所有submap的信息, 包括 trajectory_id,submap_index,submap_version,pose
+// 获取所有submap的信息, 包括 trajectory_id, submap_index, submap_version, pose
 cartographer_ros_msgs::SubmapList MapBuilderBridge::GetSubmapList() {
   cartographer_ros_msgs::SubmapList submap_list;
   submap_list.header.stamp = ::ros::Time::now();
@@ -281,6 +284,12 @@ MapBuilderBridge::GetLocalTrajectoryData() {
 
     // 获取local slam 数据
     std::shared_ptr<const LocalTrajectoryData::LocalSlamData> local_slam_data;
+    //由于在.h文件中声明了如下
+      // std::unordered_map<int,
+      //                std::shared_ptr<const LocalTrajectoryData::LocalSlamData>>
+      // local_slam_data_ GUARDED_BY(mutex_);
+      //由于lock(&mutex_)在离开它所在的作用域时，会进行析构解锁，故用大括号框起来。
+      //最低限度的阻塞
     {
       absl::MutexLock lock(&mutex_);
       if (local_slam_data_.count(trajectory_id) == 0) {
@@ -310,12 +319,13 @@ MapBuilderBridge::GetLocalTrajectoryData() {
   return local_trajectory_data;
 }
 
-// 获取对应id轨迹的所有位姿的集合
+// 获取对应id轨迹的所有位姿的集合，可以用来绘制rviz中的轨迹
 void MapBuilderBridge::HandleTrajectoryQuery(
     cartographer_ros_msgs::TrajectoryQuery::Request& request,
     cartographer_ros_msgs::TrajectoryQuery::Response& response) {
   // This query is safe if the trajectory doesn't exist (returns 0 poses).
   // However, we can filter unwanted states at the higher level in the node.
+  // 获取所有节点的位姿
   const auto node_poses = map_builder_->pose_graph()->GetTrajectoryNodePoses();
   for (const auto& node_id_data :
        node_poses.trajectory(request.trajectory_id)) {
@@ -326,7 +336,7 @@ void MapBuilderBridge::HandleTrajectoryQuery(
     pose_stamped.header.frame_id = node_options_.map_frame;
     pose_stamped.header.stamp =
         ToRos(node_id_data.data.constant_pose_data.value().time);
-    // 使用的是global坐标系下的坐标
+    // 使用的是global坐标系下的坐标（优化后）
     pose_stamped.pose = ToGeometryMsgPose(node_id_data.data.global_pose);
     response.trajectory.push_back(pose_stamped);
   }
@@ -675,6 +685,7 @@ void MapBuilderBridge::OnLocalSlamResult(
                                              std::move(range_data_in_local)});
   // 保存结果数据
   absl::MutexLock lock(&mutex_);
+  // 一个id对应一组值，local_slam_data会实时更新
   local_slam_data_[trajectory_id] = std::move(local_slam_data);
 }
 

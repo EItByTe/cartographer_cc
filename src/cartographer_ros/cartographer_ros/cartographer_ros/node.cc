@@ -371,6 +371,7 @@ void Node::PublishLocalTrajectoryData(const ::ros::TimerEvent& timer_event) {
         // TODO(gaschler): Consider using other message without time
         // information.
         carto::sensor::TimedPointCloud point_cloud;
+        // 内存大小设置
         point_cloud.reserve(trajectory_data.local_slam_data->range_data_in_local
                                 .returns.size());
 
@@ -382,11 +383,11 @@ void Node::PublishLocalTrajectoryData(const ::ros::TimerEvent& timer_event) {
               point, 0.f /* time */));
         }
 
-        // 先将点云转换成ROS的格式,再发布scan_matched_point_cloud点云
+        // 2.将点云转换成ROS的格式, 3.发布scan_matched_point_cloud点云
         scan_matched_point_cloud_publisher_.publish(ToPointCloud2Message(
             carto::common::ToUniversal(trajectory_data.local_slam_data->time),
             node_options_.map_frame,
-            // 将雷达坐标系下的点云转换成地图坐标系下的点云
+            // 1. 将雷达坐标系下的点云转换成地图坐标系下的点云
             carto::sensor::TransformTimedPointCloud(
                 point_cloud, trajectory_data.local_to_map.cast<float>())));
       }  // end 发布scan_matched_point_cloud
@@ -406,7 +407,7 @@ void Node::PublishLocalTrajectoryData(const ::ros::TimerEvent& timer_event) {
     const ::cartographer::common::Time now = std::max(
         FromRos(ros::Time::now()), extrapolator.GetLastExtrapolatedTime());
     stamped_transform.header.stamp =
-        node_options_.use_pose_extrapolator
+        node_options_.use_pose_extrapolator // 雷达频率高才准
             ? ToRos(now)
             : ToRos(trajectory_data.local_slam_data->time);
 
@@ -421,12 +422,14 @@ void Node::PublishLocalTrajectoryData(const ::ros::TimerEvent& timer_event) {
     // 保存当前的时间戳, 以防止对同一时间戳进行重复更新
     last_published_tf_stamps_[entry.first] = stamped_transform.header.stamp;
 
+    // 发布tf，但是carto其实并没有使用tf，只使用了静态的tf，但是rviz可视化时会出现效果不佳。
     const Rigid3d tracking_to_local_3d =
         node_options_.use_pose_extrapolator
-            ? extrapolator.ExtrapolatePose(now)
-            : trajectory_data.local_slam_data->local_pose;
+            ? extrapolator.ExtrapolatePose(now) //位姿推测器不是很准的
+            : trajectory_data.local_slam_data->local_pose;//经过前端匹配后的位姿，更精准
     
     // 获取当前位姿在local坐标系下的坐标
+    // &表示引用
     const Rigid3d tracking_to_local = [&] {
       // 是否将变换投影到平面上
       if (trajectory_data.trajectory_options.publish_frame_projected_to_2d) {
@@ -434,13 +437,15 @@ void Node::PublishLocalTrajectoryData(const ::ros::TimerEvent& timer_event) {
             carto::transform::Project2D(tracking_to_local_3d));
       }
       return tracking_to_local_3d;
-    }();
+    }();// 加()表示直接执行这个函数
 
     // 求得当前位姿在map下的坐标
     const Rigid3d tracking_to_map =
         trajectory_data.local_to_map * tracking_to_local;
 
     // 根据lua配置文件发布tf
+    // published_to_tracking：published_frame 到 tracking_frame 间的坐标变换
+    // publish_to_tf 默认值给出是true
     if (trajectory_data.published_to_tracking != nullptr) {
       if (node_options_.publish_to_tf) {
         // 如果需要cartographer提供odom坐标系
@@ -476,6 +481,7 @@ void Node::PublishLocalTrajectoryData(const ::ros::TimerEvent& timer_event) {
           stamped_transform.child_frame_id =
               trajectory_data.trajectory_options.published_frame;
           stamped_transform.transform = ToGeometryMsgTransform(
+            // tracking_to_map: 当前位姿在map下的坐标
               tracking_to_map * (*trajectory_data.published_to_tracking));
           // 发布 map_frame -> published_frame 的tf
           tf_broadcaster_.sendTransform(stamped_transform);
@@ -1093,6 +1099,7 @@ void Node::RunFinalOptimization() {
   {
     for (const auto& entry : map_builder_bridge_.GetTrajectoryStates()) {
       const int trajectory_id = entry.first;
+      // 如果有轨迹仍然在ACTIVE状态，则无法进行全局优化。
       if (entry.second == TrajectoryState::ACTIVE) {
         LOG(WARNING)
             << "Can't run final optimization if there are one or more active "
@@ -1122,6 +1129,7 @@ void Node::HandleOdometryMessage(const int trajectory_id,
                                  const std::string& sensor_id,
                                  const nav_msgs::Odometry::ConstPtr& msg) {
   absl::MutexLock lock(&mutex_);
+  // 采样跳过
   if (!sensor_samplers_.at(trajectory_id).odometry_sampler.Pulse()) {
     return;
   }
@@ -1129,8 +1137,10 @@ void Node::HandleOdometryMessage(const int trajectory_id,
   auto odometry_data_ptr = sensor_bridge_ptr->ToOdometryData(msg);
   // extrapolators_使用里程计数据进行位姿预测
   if (odometry_data_ptr != nullptr) {
+    // 位姿估计器 等讲前端的时候再讲
     extrapolators_.at(trajectory_id).AddOdometryData(*odometry_data_ptr);
   }
+  // sensor_bridge处理
   sensor_bridge_ptr->HandleOdometryMessage(sensor_id, msg);
 }
 

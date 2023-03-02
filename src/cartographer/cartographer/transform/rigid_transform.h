@@ -129,9 +129,9 @@ using Rigid2f = Rigid2<float>;
 template <typename FloatType>
 class Rigid3 {
  public:
-  using Vector = Eigen::Matrix<FloatType, 3, 1>;
-  using Quaternion = Eigen::Quaternion<FloatType>;
-  using AngleAxis = Eigen::AngleAxis<FloatType>;
+  using Vector = Eigen::Matrix<FloatType, 3, 1>; // 平移
+  using Quaternion = Eigen::Quaternion<FloatType>;  // 四元数
+  using AngleAxis = Eigen::AngleAxis<FloatType>;  // 轴角旋转
 
   Rigid3() : translation_(Vector::Zero()), rotation_(Quaternion::Identity()) {}
   Rigid3(const Vector& translation, const Quaternion& rotation)
@@ -142,7 +142,9 @@ class Rigid3 {
   static Rigid3 Rotation(const AngleAxis& angle_axis) {
     return Rigid3(Vector::Zero(), Quaternion(angle_axis));
   }
-
+  // 类中用static修饰成员变量，表示该类不需要有对象就能调用的函数
+  // 但是只能修改 同为静态的 成员变量
+  // 这里做法就是返回了一个新生成的变量
   static Rigid3 Rotation(const Quaternion& rotation) {
     return Rigid3(Vector::Zero(), rotation);
   }
@@ -196,7 +198,7 @@ class Rigid3 {
   Quaternion rotation_;
 };
 
-// lhs是全局坐标系下的位姿, rhs是全局坐标系下的坐姿变动量
+// lhs是全局坐标系下的位姿, rhs是全局坐标系下的位姿变动量
 // lhs.rotation() * rhs.translation() + lhs.translation() 的意思是
 // 将 rhs 转换成 lhs自身坐标系下的位姿变动量 再与lhs的坐标相加
 // 得到 lhs 在全局坐标系下的新的位姿
@@ -204,10 +206,14 @@ template <typename FloatType>
 Rigid3<FloatType> operator*(const Rigid3<FloatType>& lhs,
                             const Rigid3<FloatType>& rhs) {
   return Rigid3<FloatType>(
-      lhs.rotation() * rhs.translation() + lhs.translation(),
-      (lhs.rotation() * rhs.rotation()).normalized());
+      // 这里是将rhs作为坐标变换，作用在lhs坐标系下
+      // 先把rhs的平移量投影到lhs坐标系下，再相加上lhs原本的平移量. 
+      lhs.rotation() * rhs.translation() + lhs.translation(),   // delta平移
+      // 做变换就是左乘
+      (lhs.rotation() * rhs.rotation()).normalized());  // delta旋转
 }
 
+// 将point以rigid3作为坐标变换矩阵，进行旋转平移变换
 template <typename FloatType>
 typename Rigid3<FloatType>::Vector operator*(
     const Rigid3<FloatType>& rigid,

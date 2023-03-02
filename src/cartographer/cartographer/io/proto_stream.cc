@@ -29,17 +29,18 @@ const uint64 kMagic = 0x7b1d1f7b5bf501db;
 // 写入8个字节的校验位
 void WriteSizeAsLittleEndian(uint64 size, std::ostream* out) {
   for (int i = 0; i != 8; ++i) {
-    out->put(size & 0xff);
-    size >>= 8;
+    out->put(size & 0xff); // 提取size最右边的8位，放入out 
+    size >>= 8; // 右移8位，将提取出来的8位删除，供下一次提取
   }
 }
 
 // 读取前8个字节的值, 进行累加
+// 从out中从第七字节读起，每次右移8位，左移56位，可以缓缓将第一字节读回第七字节
 bool ReadSizeAsLittleEndian(std::istream* in, uint64* size) {
   *size = 0;
   for (int i = 0; i != 8; ++i) {
     *size >>= 8;
-    *size += static_cast<uint64>(in->get()) << 56;
+    *size += static_cast<uint64>(in->get()) << 56; // 左移56位
   }
   return !in->fail();
 }
