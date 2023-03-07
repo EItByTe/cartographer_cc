@@ -72,6 +72,10 @@ std::unique_ptr<carto::sensor::OdometryData> SensorBridge::ToOdometryData(
   // 将里程计的footprint的pose转成tracking_frame的pose, 再转成carto的里程计数据类型
   return absl::make_unique<carto::sensor::OdometryData>(
       carto::sensor::OdometryData{
+        // sensor_to_tracking是imu->footprint的坐标变换，取逆就是footprint->imu_link
+        // 这里pose是指在footprint坐标系下里程计的坐标
+        // 相乘后在Imu_link下里程计的pose
+        // 这里*已经经过重载，可以直接使用
           time, ToRigid3d(msg->pose.pose) * sensor_to_tracking->inverse()});
 }
 
@@ -93,7 +97,8 @@ void SensorBridge::HandleOdometryMessage(
 void SensorBridge::HandleNavSatFixMessage(
     const std::string& sensor_id, const sensor_msgs::NavSatFix::ConstPtr& msg) {
   const carto::common::Time time = FromRos(msg->header.stamp);
-  // 如果不是固定解,就加入一个固定的空位姿
+  // 如果不是固定解,就加入一个固定的空位姿(因为此时的位姿不好)
+  // 还有过桥洞等场景，这里限制了GPS的数据不会出现太范围的跳变
   if (msg->status.status == sensor_msgs::NavSatStatus::STATUS_NO_FIX) {
     trajectory_builder_->AddSensorData(
         sensor_id,
@@ -102,6 +107,7 @@ void SensorBridge::HandleNavSatFixMessage(
   }
 
   // 确定ecef原点到局部坐标系的坐标变换
+  // 这个if判断只会进第一次，ecef_to_local_frame_没有值的时候进入。
   if (!ecef_to_local_frame_.has_value()) {
     ecef_to_local_frame_ =
         ComputeLocalFrameFromLatLong(msg->latitude, msg->longitude);
